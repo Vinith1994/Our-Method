@@ -29,14 +29,17 @@ amount_neighbours_dict = pickle.load(pickle_in, encoding="bytes")
 #print("Amount Neighbours info")
 for layer,subgraph in amount_neighbours_dict.items():
   #print("Number of nodes in layer "+str(layer)+" is "+str(len(subgraph)))
+  num_edges_in_layer = 0
   for nodeid,down_weight in subgraph.items():
     #print("Layer "+str(layer)+": Node id "+str(nodeid)+"'s down weight is "+str(down_weight))
     tup = final_graph[layer][nodeid]
     final_subdict = {}
     final_subdict["neighbor ids"] = tup[0]
+    num_edges_in_layer += len(tup[0])
     final_subdict["weights to neighbor ids"] = tup[1]
     final_subdict["weight to down layer"] = down_weight
     final_graph[layer][nodeid] = final_subdict
+  #print("layer " + str(layer) + " total edges are " + str(num_edges_in_layer))
 #print()
 
 #test_layer = 2
@@ -51,6 +54,7 @@ node_dict = {}
 x = []
 edge_index = []
 edge_attr = []
+edge_color = []
 y = []
 
 # Task Name
@@ -90,15 +94,16 @@ for layer,subgraph in final_graph.items():
     new_node_label = old_node_labels[nodeid-node_id_starts_from_one]
     y.append(new_node_label)
     count = count + 1
-  nodeid = total_num_nodes_in_original_graph+1
-  node_dict[layer][nodeid] = count
-  sublist = []
-  sublist.append(layer)
-  sublist.append(nodeid)
-  x.append(sublist)
-  new_node_label = max(old_node_labels)+1
-  y.append(new_node_label)
-  count = count + 1
+  if (str(sys.argv[4]) == "with_extra"):
+    nodeid = total_num_nodes_in_original_graph+1
+    node_dict[layer][nodeid] = count
+    sublist = []
+    sublist.append(layer)
+    sublist.append(nodeid)
+    x.append(sublist)
+    new_node_label = max(old_node_labels)+1
+    y.append(new_node_label)
+    count = count + 1
 
 edge_index_1 = []
 edge_index_2 = []
@@ -107,20 +112,23 @@ for layer,subgraph in final_graph.items():
   for nodeid,another_subgraph in subgraph.items():
     neighbor_ids_list = final_graph[layer][nodeid]["neighbor ids"]
     weights_to_neighbor_ids_list = final_graph[layer][nodeid]["weights to neighbor ids"]
-    first = node_dict[layer][nodeid]
-    second = node_dict[layer][total_num_nodes_in_original_graph+1]
-    edge_index_1.append(first)
-    edge_index_2.append(second)
-    ele = []
-    dummy_weight_info = 1
-    ele.append(dummy_weight_info)
-    edge_attr.append(ele)
-    edge_index_1.append(second)
-    edge_index_2.append(first)
-    ele = []
-    dummy_weight_info = 1
-    ele.append(dummy_weight_info)
-    edge_attr.append(ele)
+    if (str(sys.argv[4]) == "with_extra"):
+      first = node_dict[layer][nodeid]
+      second = node_dict[layer][total_num_nodes_in_original_graph+1]
+      edge_index_1.append(first)
+      edge_index_2.append(second)
+      ele = []
+      dummy_weight_info = 1
+      ele.append(dummy_weight_info)
+      edge_attr.append(ele)
+      edge_color.append(layer)
+      edge_index_1.append(second)
+      edge_index_2.append(first)
+      ele = []
+      dummy_weight_info = 1
+      ele.append(dummy_weight_info)
+      edge_attr.append(ele)
+      edge_color.append(layer)
     for idx in range(len(neighbor_ids_list)):
       first = node_dict[layer][nodeid]
       second = node_dict[layer][neighbor_ids_list[idx]]
@@ -129,6 +137,7 @@ for layer,subgraph in final_graph.items():
       ele = []
       ele.append(weights_to_neighbor_ids_list[idx])
       edge_attr.append(ele)
+      edge_color.append(layer)
     if(layer != total_num_layers-1):
       first = node_dict[layer][nodeid]
       if nodeid in node_dict[layer+1]:
@@ -140,18 +149,21 @@ for layer,subgraph in final_graph.items():
         down_edge_weight_info = math.log(down_edge_weight_info + math.e)
         ele.append(down_edge_weight_info)
         edge_attr.append(ele)
+        edge_color.append(total_num_layers)
         edge_index_1.append(second)
         edge_index_2.append(first)
         ele = []
         up_edge_weight_info = 1
         ele.append(up_edge_weight_info)
         edge_attr.append(ele)
+        edge_color.append(total_num_layers)
 
 edge_index.append(edge_index_1)
 edge_index.append(edge_index_2)
 
 edge_index = np.array(edge_index)
 edge_attr = np.array(edge_attr)
+edge_color = np.array(edge_color)
 x = np.array(x)
 y = np.array(y)
 
@@ -176,6 +188,8 @@ print(x.shape)
 print(edge_index.shape)
 #print(edge_attr)
 print(edge_attr.shape)
+#print(edge_color)
+print(edge_color.shape)
 #print(y)
 print(y.shape)
 
@@ -185,5 +199,6 @@ aggregated_data.append(edge_index)
 aggregated_data.append(edge_attr)
 aggregated_data.append(y)
 aggregated_data.append(mapper)
-pickle.dump(aggregated_data, open("send_pickles/"+taskname+".pickle", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
+aggregated_data.append(edge_color)
+pickle.dump(aggregated_data, open(str(sys.argv[3]) + "_" + str(sys.argv[4]) + "_" + str(sys.argv[5]) + "_pickles/"+taskname+".pickle", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
 
