@@ -3,12 +3,14 @@ import numpy as np
 import math
 from sklearn.preprocessing import OneHotEncoder
 import sys
+import os
 
 final_graph = {}
 
 pickle_in = open("./struc2vec/pickles/distances_nets_graphs.pickle", "rb")
 graph_dict = pickle.load(pickle_in, encoding="bytes")
 
+taskname = str(sys.argv[1])
 #print("Graph")
 for layer,subgraph in graph_dict.items():
   #print("Number of nodes in layer "+str(layer)+" is "+str(len(subgraph)))
@@ -28,7 +30,7 @@ amount_neighbours_dict = pickle.load(pickle_in, encoding="bytes")
 
 #print("Amount Neighbours info")
 for layer,subgraph in amount_neighbours_dict.items():
-  #print("Number of nodes in layer "+str(layer)+" is "+str(len(subgraph)))
+  print("Number of nodes in layer "+str(layer)+" is "+str(len(subgraph)))
   num_edges_in_layer = 0
   for nodeid,down_weight in subgraph.items():
     #print("Layer "+str(layer)+": Node id "+str(nodeid)+"'s down weight is "+str(down_weight))
@@ -42,11 +44,8 @@ for layer,subgraph in amount_neighbours_dict.items():
   #print("layer " + str(layer) + " total edges are " + str(num_edges_in_layer))
 #print()
 
-#test_layer = 2
-#test_nodeid = 1
-#print(final_graph[test_layer][test_nodeid]["neighbor ids"])
-#print(final_graph[test_layer][test_nodeid]["weights to neighbor ids"])
-#print(final_graph[test_layer][test_nodeid]["weight to down layer"])
+
+#Final graph dict is generated
 
 count = 0
 
@@ -57,33 +56,23 @@ edge_attr = []
 edge_color = []
 y = []
 
-# Task Name
-#taskname = "barbel_10_5"
 #taskname = "barbel_50_5"
-taskname = str(sys.argv[1])
 
 # If node id starts from 1, this should be 1. If starts from 0, then 0
 node_id_starts_from_one = 0
 
-# Mirrored Karate
-#old_node_labels = [0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,0,0,1,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1]
-
-# Barbel_10_5
-#old_node_labels = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2]
-
-# Barbel_50_5
-#old_node_labels = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2]
 tmp = open(str(sys.argv[2]), 'r').readlines()[0]
 old_node_labels = tmp.strip('][').split(', ')
 old_node_labels = list(map(int, old_node_labels))
-print(type(old_node_labels))
-print(old_node_labels)
+#print(type(old_node_labels))
+#print(old_node_labels)
 
 total_num_layers = len(final_graph)
 total_num_nodes_in_original_graph = len(final_graph[0])
 
 for layer,subgraph in final_graph.items():
   node_dict[layer] = {}
+  print (layer)
   for nodeid,another_subgraph in subgraph.items():
     #print (layer, nodeid)
     node_dict[layer][nodeid] = count
@@ -91,6 +80,7 @@ for layer,subgraph in final_graph.items():
     sublist.append(layer)
     sublist.append(nodeid)
     x.append(sublist)
+    #print(nodeid)
     new_node_label = old_node_labels[nodeid-node_id_starts_from_one]
     y.append(new_node_label)
     count = count + 1
@@ -108,7 +98,9 @@ for layer,subgraph in final_graph.items():
 edge_index_1 = []
 edge_index_2 = []
 
+
 for layer,subgraph in final_graph.items():
+  print (layer)
   for nodeid,another_subgraph in subgraph.items():
     neighbor_ids_list = final_graph[layer][nodeid]["neighbor ids"]
     weights_to_neighbor_ids_list = final_graph[layer][nodeid]["weights to neighbor ids"]
@@ -192,13 +184,20 @@ print(edge_attr.shape)
 print(edge_color.shape)
 #print(y)
 print(y.shape)
+#print(mapper)
+print(len(mapper))
 
 aggregated_data = []
-aggregated_data.append(x)
+aggregated_data.append(x.shape)
 aggregated_data.append(edge_index)
 aggregated_data.append(edge_attr)
 aggregated_data.append(y)
 aggregated_data.append(mapper)
 aggregated_data.append(edge_color)
-pickle.dump(aggregated_data, open(str(sys.argv[3]) + "_" + str(sys.argv[4]) + "_" + str(sys.argv[5]) + "_pickles/"+taskname+".pickle", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
-
+folder_path = "multilayer_datasets/" + str(sys.argv[3]) + "_dataset/"  + str(sys.argv[3]) + "_" + str(sys.argv[4]) + "_" + str(sys.argv[5]) + "_pickles/"
+try:
+  os.makedirs(folder_path)
+except:
+  pass
+print("PICKLING NOW")
+pickle.dump(aggregated_data, open(folder_path + taskname + ".pickle", "wb"), protocol=pickle.HIGHEST_PROTOCOL)
